@@ -1,0 +1,19 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.idea/
+.vscode/
+
+# Node (only if you later add a build/hosting toolchain)
+node_modules/
+npm-debug.log*
+dist/
+.env
+.env.*
+
+# Local test artifacts
+*.png
+!docs/*.png
+test.js
