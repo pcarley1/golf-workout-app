@@ -31,10 +31,15 @@ Just open `index.html`:
 
 - **Locally:** double-click the file, or open it in a mobile browser and use
   *Share → Add to Home Screen* for a fullscreen, app-like launcher.
-- **Hosted (static):** deploy `index.html` to any static host (GitHub Pages, Cloudflare
-  Pages, Netlify, Railway, …). A stable URL is the cleanest way to install it to your home
-  screen and get automatic updates. *(For true offline from a URL, add a service worker /
-  PWA manifest — see Roadmap.)*
+- **Hosted (installable PWA):** deploy the folder to any static host (GitHub Pages,
+  Cloudflare Pages, Netlify, Railway, …). It ships a web app manifest + service worker, so
+  after the first visit it **installs to the home screen and runs fully offline**, and picks
+  up new deploys automatically when you're online.
+
+### Enable GitHub Pages (free hosted URL)
+Repo **Settings → Pages → Build and deployment → Deploy from a branch → `main` / root**.
+It'll be live at `https://pcarley1.github.io/golf-workout-app/`. Open it on your phone once,
+then *Share → Add to Home Screen*.
 
 ## Data & privacy
 
@@ -53,7 +58,7 @@ docs/           → data model & consolidation notes
 
 ## Roadmap / ideas
 
-- Installable **PWA** (manifest + service worker) for true offline from a hosted URL.
+- ~~Installable PWA (manifest + service worker) for true offline from a hosted URL.~~ ✅ done
 - Rest timer that auto-starts between sets.
 - Per-session notes; volume (not just top-set) trends.
 - Optional **cloud sync** (backend + DB + light auth) for phone↔laptop.

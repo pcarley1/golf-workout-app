@@ -13,7 +13,7 @@ dist/
 .env
 .env.*
 
-# Local test artifacts
-*.png
-!docs/*.png
+# Local test artifacts (only ignore stray PNGs in repo root, keep icons/ and docs/)
+/*.png
 test.js
+test-pwa.js
