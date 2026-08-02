@@ -27,7 +27,8 @@
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
   button { font-family: inherit; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 26px 16px 110px; }
+  .wrap { max-width: 640px; margin: 0 auto;
+    padding: calc(26px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 110px calc(16px + env(safe-area-inset-left)); }
   .kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .18em; font-weight: 700; }
   h1.title { font-size: 30px; font-weight: 800; margin: 6px 0 0; letter-spacing: -.03em; }
   .subtitle { font-size: 13px; color: #888; margin: 8px 0 0; line-height: 1.5; }
@@ -46,6 +47,17 @@
   .btn { border: none; border-radius: 9px; cursor: pointer; font-weight: 700; }
   .fadein { animation: fadein .18s ease; }
   @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  /* library picker bottom sheet */
+  .overlay { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.55);
+    display: flex; align-items: flex-end; justify-content: center; animation: fadein .15s ease; }
+  .sheet { background: #121212; border: 1px solid var(--line); border-bottom: none;
+    border-radius: 18px 18px 0 0; width: 100%; max-width: 640px; max-height: 86vh;
+    display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom);
+    animation: slideup .2s ease; }
+  @keyframes slideup { from { transform: translateY(100%); } to { transform: none; } }
+  .chip { padding: 7px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1px solid #2f2f2f; background: transparent; color: #aaa; white-space: nowrap; }
+  .chip.on { background: var(--blue); border-color: var(--blue); color: var(--ink); }
 </style>
 </head>
 <body>
@@ -520,11 +532,184 @@ const ANGLE_TESTS = [
     hint: "How far the pelvis rotates while shoulders stay quiet." },
 ];
 
+/* --------------------------- EXERCISE LIBRARY ----------------------------- */
+/* Every movement is tagged by PURPOSE (use-case) and equipment, so "swap"
+   means "show me other movements that serve the same training goal." */
+const USE = {
+  rotpower: "Rotational power", posting: "Lead-side posting", separation: "Separation / dissociation",
+  antirot: "Anti-rotation", hamstring: "Hamstring / posterior chain", hipir: "Hip internal rotation",
+  hipmob: "Hip mobility", shallowing: "Trail-shoulder ER (shallowing)", squat: "Squat / knee-dominant",
+  hinge: "Hinge / deadlift", singleleg: "Single-leg strength", push: "Upper push", pull: "Upper pull",
+  core: "Core / anti-extension", carry: "Carry / stability", glute: "Glute / hip strength",
+  calf: "Calf", arms: "Arms", cardio: "Cardio", warmup: "Warm-up / prep", stretch: "Stretch / cooldown",
+  skill: "Swing skill",
+};
+const EQUIP = { bar: "Barbell", db: "Dumbbell", kb: "Kettlebell", cable: "Cable", band: "Band",
+  medball: "Med ball", machine: "Machine", bw: "Bodyweight", trapbar: "Trap bar", slider: "Slider",
+  dowel: "Dowel", wall: "Wall" };
+/* n=name, u=use tags, e=equipment, c=caution */
+const EXERCISES = [
+  // --- Rotational power ---
+  { n: "Rotational med ball throw (side-on to wall)", u: ["rotpower", "posting"], e: ["medball", "wall"] },
+  { n: "Step-behind rotational scoop toss", u: ["rotpower", "posting"], e: ["medball", "wall"] },
+  { n: "Med ball rotational wall throw", u: ["rotpower"], e: ["medball", "wall"] },
+  { n: "Med ball shotput throw (rotational)", u: ["rotpower", "posting"], e: ["medball", "wall"] },
+  { n: "Med ball overhead slam", u: ["rotpower", "core"], e: ["medball"] },
+  { n: "Cable rotational chop (high→low)", u: ["rotpower", "separation"], e: ["cable"] },
+  { n: "Band rotational chop (high→low)", u: ["rotpower", "separation"], e: ["band"] },
+  { n: "Landmine rotational press", u: ["rotpower", "posting"], e: ["bar"] },
+  { n: "Landmine rotational chop", u: ["rotpower", "separation"], e: ["bar"] },
+  { n: "DB lead-side hip hinge → rotate & press", u: ["rotpower", "posting"], e: ["db"] },
+  { n: "Cable low-to-high lift", u: ["rotpower", "separation"], e: ["cable"] },
+  { n: "Light med ball warm-up throws", u: ["warmup", "rotpower"], e: ["medball", "wall"] },
+  // --- Posting / ground force / plyo ---
+  { n: "Skater step → stick (onto lead leg)", u: ["posting", "singleleg"], e: ["bw"] },
+  { n: "Trap-bar jump (light) or squat jump", u: ["posting"], e: ["trapbar", "bw"] },
+  { n: "Box jump (step down)", u: ["posting"], e: ["bw"] },
+  { n: "Lateral bound → stick", u: ["posting", "singleleg"], e: ["bw"] },
+  { n: "DB/barbell reverse lunge (lead-leg focus)", u: ["posting", "singleleg"], e: ["db", "bar"] },
+  // --- Separation / dissociation / skill ---
+  { n: "Half-kneeling T-spine rotation", u: ["separation"], e: ["bw"] },
+  { n: "DB half-kneeling T-spine rotation (hips locked)", u: ["separation"], e: ["db"] },
+  { n: "Seated trunk rotation, hips pinned (DB at chest)", u: ["separation"], e: ["db"] },
+  { n: "Open books (T-spine rotation)", u: ["separation", "warmup"], e: ["bw"] },
+  { n: "DB half-kneeling wood chop (3s eccentric)", u: ["separation", "antirot"], e: ["db"] },
+  { n: "Dowel-across-shoulders separation turns", u: ["separation", "skill"], e: ["dowel"] },
+  { n: "Step drill (lower starts, trunk lags)", u: ["separation", "skill"], e: ["bw"] },
+  { n: "Hip-turn, dowel down spine (stable posture)", u: ["separation", "skill"], e: ["dowel"] },
+  { n: "Walking lunge w/ reach + twist", u: ["warmup", "separation", "hipmob"], e: ["bw"] },
+  { n: "Side plank reach-through", u: ["separation", "core"], e: ["bw"] },
+  // --- Anti-rotation ---
+  { n: "Half-kneeling Pallof press", u: ["antirot"], e: ["cable", "band"] },
+  { n: "Half-kneeling cable Pallof press", u: ["antirot"], e: ["cable"] },
+  { n: "Tall-kneeling band Pallof press", u: ["antirot"], e: ["band"] },
+  { n: "DB suitcase hold (heavy, resist the lean)", u: ["antirot", "carry"], e: ["db"] },
+  { n: "Suitcase carry", u: ["antirot", "carry"], e: ["db", "kb"] },
+  { n: "Bird dog", u: ["antirot", "core"], e: ["bw"] },
+  // --- Hamstring / posterior chain ---
+  { n: "DB single-leg RDL (3s eccentric)", u: ["hamstring", "singleleg"], e: ["db"], c: "hamstring" },
+  { n: "DB single-leg RDL (lead leg)", u: ["hamstring", "singleleg"], e: ["db"], c: "hamstring" },
+  { n: "Single-leg Romanian deadlift", u: ["hamstring", "singleleg"], e: ["db", "bw"], c: "hamstring" },
+  { n: "Cable pull-through", u: ["hamstring", "glute", "hinge"], e: ["cable"] },
+  { n: "Kettlebell swing", u: ["hamstring", "hinge", "glute"], e: ["kb"] },
+  { n: "Seated / lying leg curl", u: ["hamstring"], e: ["machine"] },
+  { n: "45° back extension", u: ["hamstring", "glute", "core"], e: ["bw"] },
+  { n: "Nordic hamstring curl (assisted)", u: ["hamstring"], e: ["bw"], c: "hamstring" },
+  // --- Hinge / deadlift (bilateral) ---
+  { n: "Trap-bar deadlift (or back squat)", u: ["hinge", "posting"], e: ["trapbar", "bar"], c: "hamstring" },
+  { n: "Romanian deadlift", u: ["hinge", "hamstring"], e: ["bar", "db"], c: "hamstring" },
+  { n: "Conventional deadlift", u: ["hinge", "posting"], e: ["bar"], c: "hamstring" },
+  { n: "Hinge pattern drill w/ dowel (light)", u: ["hinge", "skill", "warmup"], e: ["dowel"] },
+  // --- Squat / knee-dominant ---
+  { n: "Goblet squat", u: ["squat"], e: ["db", "kb"] },
+  { n: "Goblet squat to depth (empty/light)", u: ["squat", "warmup"], e: ["db", "kb", "bw"] },
+  { n: "Barbell back squat (or trap-bar deadlift)", u: ["squat", "posting"], e: ["bar", "trapbar"] },
+  { n: "Front squat", u: ["squat"], e: ["bar"] },
+  { n: "Leg press", u: ["squat"], e: ["machine"] },
+  { n: "Bodyweight squat to stand", u: ["squat", "warmup"], e: ["bw"] },
+  // --- Single-leg ---
+  { n: "Bulgarian split squat", u: ["singleleg"], e: ["db", "bar"] },
+  { n: "DB step-back lunge (brace the front leg)", u: ["singleleg", "posting"], e: ["db"] },
+  { n: "Walking lunge", u: ["singleleg"], e: ["db", "bar"] },
+  { n: "Slider reverse lunge (short range)", u: ["singleleg"], e: ["slider"] },
+  { n: "Single-leg balance (eyes open→closed)", u: ["singleleg"], e: ["bw"] },
+  { n: "Step-up (knee drive)", u: ["singleleg", "posting"], e: ["db"] },
+  // --- Hip strength / glute ---
+  { n: "KB/DB hip loading (single-leg, controlled)", u: ["hipir", "singleleg", "glute"], e: ["kb", "db"] },
+  { n: "Cable or machine hip abduction", u: ["glute", "hipmob"], e: ["cable", "machine"] },
+  { n: "Glute bridge", u: ["glute", "warmup"], e: ["bw"] },
+  { n: "Hip thrust", u: ["glute", "posting"], e: ["bar", "db"] },
+  { n: "Copenhagen plank (adductor)", u: ["core", "hipmob"], e: ["bw"] },
+  // --- Hip internal rotation / mobility ---
+  { n: "90/90 hip switches", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "90/90 hip switches (extra reps L)", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "90/90 hip switch, long pause", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "90/90 hip switch, loaded end-range pause", u: ["hipir", "hipmob"], e: ["db", "bw"] },
+  { n: "90/90 hip switch, long end-range pause", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "Adductor rockback", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "Adductor rockback (trail-hip IR)", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "Internal rotation over bench (isolate)", u: ["hipir"], e: ["bw"] },
+  { n: "Seated 90/90 IR lift-off", u: ["hipir"], e: ["bw"] },
+  { n: "Half-kneeling lead-hip rotations", u: ["hipir", "hipmob"], e: ["bw"] },
+  { n: "Hip circles", u: ["hipmob", "warmup"], e: ["bw"] },
+  { n: "World's greatest stretch", u: ["hipmob", "warmup", "stretch"], e: ["bw"] },
+  { n: "Leg swings (front + lateral)", u: ["hipmob", "warmup"], e: ["bw"] },
+  // --- Upper push ---
+  { n: "Barbell or DB bench press", u: ["push"], e: ["bar", "db"] },
+  { n: "Standing DB/barbell overhead press", u: ["push"], e: ["db", "bar"] },
+  { n: "Standing DB overhead press", u: ["push"], e: ["db"] },
+  { n: "Incline DB press", u: ["push"], e: ["db"] },
+  { n: "Push-up (weighted)", u: ["push"], e: ["bw"] },
+  { n: "Landmine press (tall-kneeling)", u: ["push"], e: ["bar"] },
+  { n: "Scap push-ups", u: ["push", "warmup"], e: ["bw"] },
+  // --- Upper pull ---
+  { n: "Weighted pull-up or lat pulldown", u: ["pull"], e: ["bw", "machine"] },
+  { n: "Chest-supported DB row", u: ["pull"], e: ["db"] },
+  { n: "Single-arm DB row", u: ["pull"], e: ["db"] },
+  { n: "Seated cable row", u: ["pull"], e: ["cable"] },
+  { n: "Face pull", u: ["pull", "shallowing"], e: ["cable", "band"] },
+  { n: "Band pull-aparts", u: ["pull", "warmup"], e: ["band"] },
+  { n: "Scap pull-ups / band pull-aparts", u: ["pull", "warmup"], e: ["band", "bw"] },
+  { n: "Prone/standing scap squeezes", u: ["pull", "warmup"], e: ["bw"] },
+  // --- Trail-shoulder ER (shallowing) ---
+  { n: "Side-lying DB external rotation (trail arm)", u: ["shallowing"], e: ["db"] },
+  { n: "90/90 shoulder ER hold (light DB)", u: ["shallowing"], e: ["db"] },
+  { n: "Bottoms-up DB hold (cuff stability)", u: ["shallowing"], e: ["db", "kb"] },
+  { n: "Band external rotation (elbow at side)", u: ["shallowing"], e: ["band"] },
+  { n: "Light band external rotations", u: ["shallowing", "warmup"], e: ["band"] },
+  { n: "Prone Y-T-W raises", u: ["shallowing", "pull"], e: ["bw", "db"] },
+  { n: "Band shoulder dislocates / pass-throughs", u: ["shallowing", "warmup"], e: ["band"] },
+  // --- Core / anti-extension ---
+  { n: "Ab wheel rollout (or long-lever plank)", u: ["core"], e: ["bw"] },
+  { n: "Hanging knee raise", u: ["core"], e: ["bw"] },
+  { n: "Dead bug", u: ["core", "warmup"], e: ["bw"] },
+  { n: "Front plank", u: ["core"], e: ["bw"] },
+  { n: "DB side plank (or bodyweight)", u: ["core"], e: ["db", "bw"] },
+  { n: "Slider bodysaw (easy)", u: ["core"], e: ["slider"] },
+  { n: "Slider mountain climber", u: ["core"], e: ["slider"] },
+  // --- Arms / calves ---
+  { n: "DB incline curl", u: ["arms"], e: ["db"] },
+  { n: "Cable or DB triceps extension", u: ["arms"], e: ["cable", "db"] },
+  { n: "DB or machine calf raise", u: ["calf"], e: ["db", "machine"] },
+  // --- Cardio / warm-up ---
+  { n: "Bike or row, easy", u: ["cardio", "warmup"], e: ["machine"] },
+  { n: "Bike or brisk walk", u: ["cardio", "warmup"], e: ["machine"] },
+  { n: "Cat-cow", u: ["warmup"], e: ["bw"] },
+  { n: "Cat-cow + hip circles", u: ["warmup", "hipmob"], e: ["bw"] },
+  { n: "Cat-cow + T-spine openers", u: ["warmup", "separation"], e: ["bw"] },
+  { n: "Cat-cow + hip airplanes", u: ["warmup", "hipmob"], e: ["bw"] },
+  // --- Stretch / cooldown ---
+  { n: "90/90 lead-hip stretch", u: ["stretch", "hipmob"], e: ["bw"] },
+  { n: "90/90 lead-hip stretch (lean forward)", u: ["stretch", "hipmob"], e: ["bw"] },
+  { n: "Standing hip flexor stretch", u: ["stretch", "hipmob"], e: ["bw"] },
+  { n: "Couch stretch (hip flexor)", u: ["stretch", "hipmob"], e: ["bw"] },
+  { n: "Seated figure-4 glute stretch", u: ["stretch", "hipmob"], e: ["bw"] },
+  { n: "Seated spinal twist", u: ["stretch", "separation"], e: ["bw"] },
+  { n: "Toe-touch / hamstring hang (easy)", u: ["stretch", "hamstring"], e: ["bw"] },
+  { n: "Doorway pec stretch", u: ["stretch"], e: ["bw"] },
+  { n: "Child's pose + lat reach", u: ["stretch"], e: ["bw"] },
+  { n: "Child's pose + lat stretch", u: ["stretch"], e: ["bw"] },
+  { n: "Cross-body shoulder stretch", u: ["stretch", "shallowing"], e: ["bw"] },
+  { n: "Sleeper stretch", u: ["stretch", "shallowing"], e: ["bw"] },
+  { n: "Sleeper + cross-body stretch", u: ["stretch", "shallowing"], e: ["bw"] },
+];
+const EX_BY_NAME = Object.fromEntries(EXERCISES.map((x) => [x.n, x]));
+/* Substitutes: other library moves sharing a purpose tag, ranked by overlap. */
+function substitutesFor(name, useFilter) {
+  const cur = EX_BY_NAME[name];
+  const tags = useFilter ? [useFilter] : (cur ? cur.u : []);
+  return EXERCISES
+    .filter((x) => x.n !== name && x.u.some((t) => tags.includes(t)))
+    .map((x) => ({ x, score: x.u.filter((t) => tags.includes(t)).length }))
+    .sort((a, b) => b.score - a.score)
+    .map((o) => o.x);
+}
+
 /* ------------------------------- STORE ------------------------------------ */
 const KEY = "golffit.v1";
 function blankDB() {
   return { meta: { version: 1, createdAt: todayISO(), updatedAt: todayISO() },
-    settings: { units: "lb" }, sessions: [], activeSession: null, screens: [], angles: [] };
+    settings: { units: "lb" }, sessions: [], activeSession: null, screens: [], angles: [], customDays: {} };
 }
 function loadDB() {
   try { const raw = localStorage.getItem(KEY); if (raw) return migrate(JSON.parse(raw)); } catch (e) {}
@@ -533,9 +718,22 @@ function loadDB() {
 function migrate(db) {
   db.meta = db.meta || { version: 1 }; db.settings = db.settings || { units: "lb" };
   db.sessions = db.sessions || []; db.screens = db.screens || []; db.angles = db.angles || [];
+  db.customDays = db.customDays || {};
   if (!("activeSession" in db)) db.activeSession = null;
   return db;
 }
+const clone = (o) => JSON.parse(JSON.stringify(o));
+/* Effective day = user's custom-edited copy if present, else the built-in default. */
+function getDay(id) {
+  const base = DAY_BY_ID[id]; if (!base) return null;
+  const custom = DB.customDays[id];
+  return custom ? Object.assign({}, base, { blocks: custom.blocks, edited: true }) : base;
+}
+function customBlocks(id) {
+  if (!DB.customDays[id]) DB.customDays[id] = { blocks: clone(DAY_BY_ID[id].blocks) };
+  return DB.customDays[id].blocks;
+}
+function resetDay(id) { delete DB.customDays[id]; save(true); }
 let DB = loadDB();
 let saveTimer = null;
 function save(now) {
@@ -546,31 +744,41 @@ function save(now) {
 }
 
 /* --------------------------- session helpers ------------------------------ */
+const blankSet = () => ({ done: false, weight: "", reps: "" });
 function newActive(dayId) {
-  const day = DAY_BY_ID[dayId];
+  const day = getDay(dayId);
   const log = {};
   day.blocks.forEach((b) => {
-    log[b.id] = b.exercises.map((e) => Array.from({ length: e.sets || 0 }, () => ({ done: false, weight: "", reps: "" })));
+    log[b.id] = b.exercises.map((e) => Array.from({ length: e.sets || 0 }, blankSet));
   });
   return { id: uid(), dayId, date: todayISO(), accumSec: 0, running: false, lastResume: null, log };
+}
+/* Reconcile an active session's log to the day's current structure,
+   preserving already-logged sets by position (needed after in-app edits). */
+function reconcileLog(day, active) {
+  const next = {};
+  day.blocks.forEach((b) => {
+    const prevBlock = active.log[b.id] || [];
+    next[b.id] = b.exercises.map((e, ei) => {
+      const prevRows = prevBlock[ei] || [];
+      return Array.from({ length: e.sets || 0 }, (_, si) => prevRows[si] || blankSet());
+    });
+  });
+  active.log = next;
 }
 function ensureActive(dayId) {
   if (!DB.activeSession || DB.activeSession.dayId !== dayId || dayKey(DB.activeSession.date) !== dayKey()) {
     DB.activeSession = newActive(dayId);
     save();
   } else {
-    // reconcile shape in case day data changed
-    const day = DAY_BY_ID[dayId];
-    day.blocks.forEach((b) => {
-      if (!DB.activeSession.log[b.id]) DB.activeSession.log[b.id] = b.exercises.map((e) => Array.from({ length: e.sets || 0 }, () => ({ done: false, weight: "", reps: "" })));
-    });
+    reconcileLog(getDay(dayId), DB.activeSession);
   }
   return DB.activeSession;
 }
 function sessionElapsed(s) { return s.accumSec + (s.running && s.lastResume ? (Date.now() - s.lastResume) / 1000 : 0); }
 function finishSession() {
   const a = DB.activeSession; if (!a) return;
-  const day = DAY_BY_ID[a.dayId];
+  const day = getDay(a.dayId);
   const rec = { id: a.id, dayId: a.dayId, dayLabel: day.title, date: a.date,
     durationSec: Math.round(sessionElapsed(a)),
     blocks: day.blocks.map((b) => ({ blockId: b.id, label: b.label,
@@ -618,6 +826,7 @@ function render() {
   else if (route.view === "data") viewData(wrap);
   $root.appendChild(wrap);
   $root.appendChild(bottomNav());
+  if (libPicker) $root.appendChild(libraryOverlay());
 }
 
 /* ------------------------------ bottom nav -------------------------------- */
@@ -707,66 +916,85 @@ function pathEl(d) { const p = document.createElementNS("http://www.w3.org/2000/
 
 /* ------------------------------ DAY view ---------------------------------- */
 let openBlock = null;
+let editMode = false;
 function viewDay(wrap, dayId) {
-  const day = DAY_BY_ID[dayId];
+  const day = getDay(dayId);
   if (!day) return go("week");
   const active = ensureActive(dayId);
   if (openBlock === null) openBlock = day.blocks[0].id;
 
-  // header
-  wrap.appendChild(h("button", { class: "btn", onclick: () => { openBlock = null; go("week"); },
-    style: { background: "none", color: "var(--sub)", padding: "0 0 14px", fontWeight: 600, fontSize: "14px", display: "flex", alignItems: "center", gap: "4px" } },
-    "‹ Week"));
+  // header row: back + edit toggle
+  wrap.appendChild(h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px" } },
+    h("button", { class: "btn", onclick: () => { openBlock = null; editMode = false; go("week"); },
+      style: { background: "none", color: "var(--sub)", padding: 0, fontWeight: 600, fontSize: "14px" } }, "‹ Week"),
+    h("button", { class: "btn", onclick: () => { editMode = !editMode; openBlock = editMode ? "__all__" : null; render(); },
+      style: { background: editMode ? day.accent : "transparent", color: editMode ? "var(--ink)" : "var(--sub)",
+        border: editMode ? "none" : "1px solid #333", padding: "7px 14px", fontSize: "13px" } },
+      editMode ? "Done" : "✎ Edit")));
   wrap.appendChild(h("div", { style: { marginBottom: "18px" } },
-    h("div", { class: "kicker", style: { color: day.accent } }, day.kicker),
+    h("div", { class: "kicker", style: { color: day.accent } }, day.kicker + (day.edited ? " · edited" : "")),
     h("h1", { class: "title" }, day.title),
     h("p", { class: "subtitle" }, day.subtitle)));
 
-  // session timer
-  const timerVal = h("div", { class: "tabnum", style: { fontSize: "32px", fontWeight: 800, letterSpacing: "-.02em" } }, fmt(sessionElapsed(active)));
-  const startBtn = h("button", { class: "btn" });
-  function paintSession() {
-    startBtn.textContent = active.running ? "Pause" : (active.accumSec > 0 ? "Resume" : "Start session");
-    Object.assign(startBtn.style, { padding: "11px 24px", fontSize: "15px",
-      background: active.running ? "#2a2a2a" : day.accent, color: active.running ? "#eee" : "var(--ink)" });
+  if (editMode) {
+    wrap.appendChild(h("div", { class: "card", style: { padding: "13px 16px", marginBottom: "16px", borderColor: day.accent } },
+      h("div", { style: { fontSize: "13px", color: "#cfd3d9", lineHeight: 1.5 } },
+        "Editing this day. Tap Swap to trade a movement for one with the same purpose, adjust sets, or add/remove exercises. Saved on this device."),
+      (day.edited ? h("button", { class: "btn", onclick: () => {
+          if (!confirm("Reset " + day.title + " to its original exercises?")) return;
+          resetDay(dayId); ensureActive(dayId); toast("Reset to default"); render();
+        }, style: { marginTop: "10px", padding: "8px 14px", background: "transparent", color: "#c88", border: "1px solid #5a3a3a", fontSize: "13px" } }, "↺ Reset day to default") : null)));
   }
-  startBtn.addEventListener("click", () => {
-    if (active.running) { active.accumSec = sessionElapsed(active); active.running = false; active.lastResume = null; }
-    else { active.running = true; active.lastResume = Date.now(); }
-    save(); paintSession();
-  });
-  paintSession();
-  wrap.appendChild(h("div", { class: "card", style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", marginBottom: "18px" } },
-    h("div", {}, h("div", { style: { fontSize: "11px", color: "#777", textTransform: "uppercase", letterSpacing: ".1em" } }, "Total session"), timerVal),
-    startBtn));
-  liveTimers.push(setInterval(() => { if (active.running) timerVal.textContent = fmt(sessionElapsed(active)); }, 1000));
 
-  if (day.hasScreen) wrap.appendChild(screenSummaryCard());
+  // session timer (hidden while editing)
+  if (!editMode) {
+    const timerVal = h("div", { class: "tabnum", style: { fontSize: "32px", fontWeight: 800, letterSpacing: "-.02em" } }, fmt(sessionElapsed(active)));
+    const startBtn = h("button", { class: "btn" });
+    function paintSession() {
+      startBtn.textContent = active.running ? "Pause" : (active.accumSec > 0 ? "Resume" : "Start session");
+      Object.assign(startBtn.style, { padding: "11px 24px", fontSize: "15px",
+        background: active.running ? "#2a2a2a" : day.accent, color: active.running ? "#eee" : "var(--ink)" });
+    }
+    startBtn.addEventListener("click", () => {
+      if (active.running) { active.accumSec = sessionElapsed(active); active.running = false; active.lastResume = null; }
+      else { active.running = true; active.lastResume = Date.now(); }
+      save(); paintSession();
+    });
+    paintSession();
+    wrap.appendChild(h("div", { class: "card", style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", marginBottom: "18px" } },
+      h("div", {}, h("div", { style: { fontSize: "11px", color: "#777", textTransform: "uppercase", letterSpacing: ".1em" } }, "Total session"), timerVal),
+      startBtn));
+    liveTimers.push(setInterval(() => { if (active.running) timerVal.textContent = fmt(sessionElapsed(active)); }, 1000));
+  }
+
+  if (day.hasScreen && !editMode) wrap.appendChild(screenSummaryCard());
 
   // blocks
   day.blocks.forEach((b) => wrap.appendChild(blockCard(day, active, b)));
 
-  // finish
-  const totalSets = day.blocks.reduce((n, b) => n + b.exercises.reduce((m, e) => m + (e.sets || 0), 0), 0);
-  const doneSets = day.blocks.reduce((n, b) => n + (active.log[b.id] || []).reduce((m, rows) => m + rows.filter((s) => s.done).length, 0), 0);
-  wrap.appendChild(h("button", { class: "btn", onclick: () => {
-      finishSession(); openBlock = null;
-      toast("Session logged ✓"); go("progress");
-    },
-    style: { width: "100%", marginTop: "10px", padding: "15px", fontSize: "15px", background: day.accent, color: "var(--ink)" } },
-    "Finish & log session · " + doneSets + "/" + totalSets + " sets"));
-  wrap.appendChild(h("p", { style: { fontSize: "12px", color: "var(--dim)", textAlign: "center", marginTop: "16px", lineHeight: 1.6 } }, day.footer));
+  // finish (hidden while editing)
+  if (!editMode) {
+    const totalSets = day.blocks.reduce((n, b) => n + b.exercises.reduce((m, e) => m + (e.sets || 0), 0), 0);
+    const doneSets = day.blocks.reduce((n, b) => n + (active.log[b.id] || []).reduce((m, rows) => m + rows.filter((s) => s.done).length, 0), 0);
+    wrap.appendChild(h("button", { class: "btn", onclick: () => {
+        finishSession(); openBlock = null;
+        toast("Session logged ✓"); go("progress");
+      },
+      style: { width: "100%", marginTop: "10px", padding: "15px", fontSize: "15px", background: day.accent, color: "var(--ink)" } },
+      "Finish & log session · " + doneSets + "/" + totalSets + " sets"));
+    wrap.appendChild(h("p", { style: { fontSize: "12px", color: "var(--dim)", textAlign: "center", marginTop: "16px", lineHeight: 1.6 } }, day.footer));
+  }
 }
 
 function blockCard(day, active, b) {
-  const expanded = openBlock === b.id;
+  const expanded = editMode || openBlock === b.id;
   const rows = active.log[b.id] || [];
   const totalSets = b.exercises.reduce((n, e) => n + (e.sets || 0), 0);
   const doneSets = rows.reduce((m, r) => m + r.filter((s) => s.done).length, 0);
 
   const card = h("div", { class: "card", style: { borderColor: expanded ? b.color : "var(--line)", padding: expanded ? "18px 20px" : "15px 20px", marginBottom: "12px" } });
-  const head = h("div", { onclick: () => { openBlock = expanded ? null : b.id; render(); },
-    style: { display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" } },
+  const head = h("div", { onclick: () => { if (editMode) return; openBlock = expanded ? null : b.id; render(); },
+    style: { display: "flex", alignItems: "center", justifyContent: "space-between", cursor: editMode ? "default" : "pointer" } },
     h("div", {},
       h("div", { style: { display: "flex", alignItems: "center", gap: "10px" } }, dot(b.color),
         h("span", { style: { fontSize: "16px", fontWeight: 700, letterSpacing: "-.01em" } }, b.label)),
@@ -782,13 +1010,131 @@ function blockCard(day, active, b) {
         h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px" } },
           h("span", { style: { fontSize: "15px", fontWeight: 600 } }, e.name),
           h("span", { class: "tabnum", style: { fontSize: "13px", color: b.color, flex: "0 0 auto" } }, e.scheme)));
-      if (e.sets) exWrap.appendChild(setGrid(active, b, ei, e));
+      if (editMode) exWrap.appendChild(exerciseEditRow(day.id, b.id, ei, e));
+      else if (e.sets) exWrap.appendChild(setGrid(active, b, ei, e));
       body.appendChild(exWrap);
     });
-    body.appendChild(blockTimer(b));
+    if (editMode) {
+      body.appendChild(h("button", { class: "btn", onclick: () => openAdd(day.id, b.id),
+        style: { marginTop: "14px", width: "100%", padding: "11px", background: "transparent", border: "1px dashed #3a3a3a", color: "#bbb", fontSize: "13.5px" } },
+        "+ Add exercise from library"));
+    } else {
+      body.appendChild(blockTimer(b));
+    }
     card.appendChild(body);
   }
   return card;
+}
+
+/* Purpose chips + Swap / sets / remove controls shown per exercise in edit mode. */
+function exerciseEditRow(dayId, bid, ei, e) {
+  const lib = EX_BY_NAME[e.name];
+  const purpose = lib ? lib.u.slice(0, 3).map((t) => USE[t]).join(" · ") : "custom";
+  const row = h("div", { style: { marginTop: "8px" } });
+  row.appendChild(h("div", { style: { fontSize: "11px", color: "var(--dim)", marginBottom: "8px" } }, "Purpose: " + purpose));
+  const controls = h("div", { style: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" } });
+  controls.appendChild(h("button", { class: "btn", onclick: () => openSwap(dayId, bid, ei),
+    style: { padding: "8px 14px", background: "#1a2530", color: "#cfe0f0", border: "1px solid var(--blue)", fontSize: "13px" } }, "⇄ Swap"));
+  // sets stepper
+  const stepWrap = h("div", { style: { display: "flex", alignItems: "center", gap: "6px", border: "1px solid #333", borderRadius: "9px", padding: "4px 6px" } },
+    h("button", { class: "btn", onclick: () => setsAdjust(dayId, bid, ei, -1), style: setStepStyle() }, "−"),
+    h("span", { class: "tabnum", style: { fontSize: "13px", minWidth: "46px", textAlign: "center", color: "#ccc" } }, (e.sets || 0) + " sets"),
+    h("button", { class: "btn", onclick: () => setsAdjust(dayId, bid, ei, 1), style: setStepStyle() }, "+"));
+  controls.appendChild(stepWrap);
+  controls.appendChild(h("button", { class: "btn", onclick: () => removeExercise(dayId, bid, ei),
+    style: { padding: "8px 14px", background: "transparent", color: "#c88", border: "1px solid #5a3a3a", fontSize: "13px", marginLeft: "auto" } }, "Remove"));
+  row.appendChild(controls);
+  return row;
+}
+function setStepStyle() { return { width: "30px", height: "30px", padding: 0, background: "#242424", color: "#eee", fontSize: "18px", lineHeight: 1 }; }
+
+/* ---- edit operations (mutate the day's custom copy, then reconcile) ---- */
+function blockIn(dayId, bid) { const blocks = customBlocks(dayId); return blocks.find((b) => b.id === bid); }
+function afterEdit(dayId) { save(true); if (DB.activeSession && DB.activeSession.dayId === dayId) reconcileLog(getDay(dayId), DB.activeSession); render(); }
+function setsAdjust(dayId, bid, ei, delta) {
+  const blk = blockIn(dayId, bid); const e = blk.exercises[ei];
+  e.sets = Math.max(0, Math.min(8, (e.sets || 0) + delta));
+  afterEdit(dayId);
+}
+function removeExercise(dayId, bid, ei) {
+  const blk = blockIn(dayId, bid);
+  if (blk.exercises.length <= 1) { toast("Keep at least one exercise"); return; }
+  blk.exercises.splice(ei, 1); afterEdit(dayId);
+}
+
+/* ---- library picker (bottom sheet) for swap / add ---- */
+let libPicker = null; // { mode:'swap'|'add', dayId, bid, ei, useFilter, query }
+function openSwap(dayId, bid, ei) {
+  const cur = EX_BY_NAME[blockIn(dayId, bid).exercises[ei].name];
+  libPicker = { mode: "swap", dayId, bid, ei, useFilter: cur ? cur.u[0] : null, query: "" };
+  render();
+}
+function openAdd(dayId, bid) { libPicker = { mode: "add", dayId, bid, useFilter: null, query: "" }; render(); }
+function closePicker() { libPicker = null; render(); }
+function applyPick(exName) {
+  const P = libPicker; const blk = blockIn(P.dayId, P.bid);
+  if (P.mode === "swap") { blk.exercises[P.ei].name = exName; }
+  else { const anySets = blk.exercises.some((x) => x.sets); blk.exercises.push({ name: exName, scheme: anySets ? "8 reps" : "—", sets: anySets ? 3 : 0 }); }
+  libPicker = null; save(true);
+  if (DB.activeSession && DB.activeSession.dayId === P.dayId) reconcileLog(getDay(P.dayId), DB.activeSession);
+  toast(P.mode === "swap" ? "Swapped ✓" : "Added ✓"); render();
+}
+function libraryOverlay() {
+  const P = libPicker;
+  const curName = P.mode === "swap" ? blockIn(P.dayId, P.bid).exercises[P.ei].name : null;
+  const overlay = h("div", { class: "overlay", onclick: (e) => { if (e.target === overlay) closePicker(); } });
+  const sheet = h("div", { class: "sheet" });
+  overlay.appendChild(sheet);
+  sheet.appendChild(h("div", { style: { padding: "16px 18px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+    h("div", {}, h("div", { style: { fontSize: "16px", fontWeight: 800 } }, P.mode === "swap" ? "Swap movement" : "Add exercise"),
+      curName ? h("div", { style: { fontSize: "12px", color: "var(--sub)", marginTop: "2px" } }, "Replacing: " + curName) : null),
+    h("button", { class: "btn", onclick: closePicker, style: { background: "none", color: "#999", fontSize: "24px", padding: "0 4px", lineHeight: 1 } }, "×")));
+  const search = h("input", { type: "text", placeholder: "Search movements…", value: P.query,
+    style: { margin: "0 18px 12px", padding: "10px 12px", borderRadius: "9px", border: "1px solid #333", background: "var(--bg)", color: "#f0f0f0", fontSize: "14px" } });
+  sheet.appendChild(search);
+  const useTags = Object.keys(USE).filter((k) => EXERCISES.some((x) => x.u.includes(k)));
+  const ordered = curName && EX_BY_NAME[curName]
+    ? EX_BY_NAME[curName].u.concat(useTags.filter((t) => !EX_BY_NAME[curName].u.includes(t))) : useTags;
+  const chipRow = h("div", { style: { display: "flex", gap: "7px", overflowX: "auto", padding: "0 18px 12px" } });
+  sheet.appendChild(chipRow);
+  const listWrap = h("div", { style: { overflowY: "auto", padding: "0 12px 18px", flex: "1" } });
+  sheet.appendChild(listWrap);
+
+  function computeItems() {
+    const q = P.query.trim().toLowerCase();
+    let items;
+    if (q) items = EXERCISES.filter((x) => x.n.toLowerCase().includes(q));
+    else if (P.useFilter) items = EXERCISES.filter((x) => x.u.includes(P.useFilter));
+    else if (P.mode === "swap") items = substitutesFor(curName, null);
+    else items = EXERCISES.slice();
+    if (P.mode === "swap") items = items.filter((x) => x.n !== curName);
+    return items;
+  }
+  function paintChips() {
+    clear(chipRow);
+    const mk = (label, val) => h("button", { class: "chip" + (P.useFilter === val && !P.query ? " on" : ""),
+      onclick: () => { P.useFilter = val; P.query = ""; search.value = ""; refresh(); } }, label);
+    chipRow.appendChild(mk(P.mode === "swap" ? "All substitutes" : "All exercises", null));
+    ordered.forEach((t) => chipRow.appendChild(mk(USE[t], t)));
+  }
+  function paintList() {
+    clear(listWrap);
+    const items = computeItems();
+    if (!items.length) { listWrap.appendChild(h("div", { style: { padding: "24px", textAlign: "center", color: "#888", fontSize: "14px" } }, "No matches.")); return; }
+    items.forEach((x) => {
+      const equip = x.e.map((k) => EQUIP[k]).join(", ");
+      const purpose = x.u.map((t) => USE[t]).slice(0, 2).join(" · ");
+      listWrap.appendChild(h("div", { class: "card", onclick: () => applyPick(x.n),
+        style: { padding: "12px 14px", marginBottom: "8px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" } },
+        h("div", {}, h("div", { style: { fontSize: "14.5px", fontWeight: 600 } }, x.n),
+          h("div", { style: { fontSize: "11.5px", color: "var(--sub)", marginTop: "2px" } }, purpose + " · " + equip + (x.c ? " · ⚠ hamstring" : ""))),
+        h("span", { style: { color: "var(--blue)", fontSize: "22px", flex: "0 0 auto" } }, "＋")));
+    });
+  }
+  function refresh() { paintChips(); paintList(); }
+  search.addEventListener("input", () => { P.query = search.value; refresh(); });
+  refresh();
+  return overlay;
 }
 
 function setGrid(active, b, ei, e) {
