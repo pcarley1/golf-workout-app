@@ -1,7 +1,7 @@
 /* Post & Clear — service worker.
    App-shell cache so the app installs to the home screen and runs fully offline.
    Bump CACHE when you change any precached asset to force an update. */
-const CACHE = "postclear-v2";
+const CACHE = "postclear-v4";
 const ASSETS = [
   ".",
   "index.html",

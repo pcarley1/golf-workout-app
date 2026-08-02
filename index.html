@@ -705,6 +705,129 @@ function substitutesFor(name, useFilter) {
     .map((o) => o.x);
 }
 
+/* Variants: exercises offering more than one equipment/movement option.
+   Pick one at logging time so weight/reps and trends are kept per-variant.
+   { label: short chip text, name: the full name recorded for history/trends } */
+const VARIANTS = {
+  "Barbell or DB bench press": [{ label: "Barbell", name: "Barbell bench press" }, { label: "DB", name: "DB bench press" }],
+  "Weighted pull-up or lat pulldown": [{ label: "Pull-up", name: "Weighted pull-up" }, { label: "Lat pulldown", name: "Lat pulldown" }],
+  "Standing DB/barbell overhead press": [{ label: "DB", name: "DB overhead press" }, { label: "Barbell", name: "Barbell overhead press" }],
+  "Cable or DB triceps extension": [{ label: "Cable", name: "Cable triceps extension" }, { label: "DB", name: "DB triceps extension" }],
+  "Trap-bar deadlift (or back squat)": [{ label: "Trap-bar DL", name: "Trap-bar deadlift" }, { label: "Back squat", name: "Back squat" }],
+  "Barbell back squat (or trap-bar deadlift)": [{ label: "Back squat", name: "Barbell back squat" }, { label: "Trap-bar DL", name: "Trap-bar deadlift" }],
+  "KB/DB hip loading (single-leg, controlled)": [{ label: "KB", name: "KB single-leg hip loading" }, { label: "DB", name: "DB single-leg hip loading" }],
+  "Ab wheel rollout (or long-lever plank)": [{ label: "Ab wheel", name: "Ab wheel rollout" }, { label: "Plank", name: "Long-lever plank" }],
+  "DB or machine calf raise": [{ label: "DB", name: "DB calf raise" }, { label: "Machine", name: "Machine calf raise" }],
+  "Trap-bar jump (light) or squat jump": [{ label: "Trap-bar jump", name: "Trap-bar jump" }, { label: "Squat jump", name: "Squat jump" }],
+  "DB/barbell reverse lunge (lead-leg focus)": [{ label: "DB", name: "DB reverse lunge" }, { label: "Barbell", name: "Barbell reverse lunge" }],
+  "Cable or machine hip abduction": [{ label: "Cable", name: "Cable hip abduction" }, { label: "Machine", name: "Machine hip abduction" }],
+  "DB side plank (or bodyweight)": [{ label: "DB", name: "DB side plank" }, { label: "Bodyweight", name: "Side plank" }],
+};
+const variantsOf = (name) => VARIANTS[name] || [];
+
+/* How-to cues per movement — offline text, tuned to Pete's goals/cautions.
+   Keyed by exact exercise name; missing = no How-to shown. */
+const HOWTO = {
+  // Rotational power
+  "Rotational med ball throw (side-on to wall)": "Stand side-on to the wall, ball at your trail hip. Drive off the trail leg, rotate, and post HARD into the lead leg as you throw. Every rep 100% — reset between reps, never grind.",
+  "Step-behind rotational scoop toss": "Take a lateral step-behind to load the trail side, then unwind and scoop-throw into the wall. The step builds momentum you transfer through a firm lead-side post.",
+  "Med ball rotational wall throw": "Feet parallel to the wall, rotate and throw explosively, catch the rebound and reset. Fast and violent — this trains the speed your swing is built on.",
+  "DB lead-side hip hinge → rotate & press": "Hinge to load the lead hip, then stand and rotate into a press as you post on the lead leg. One smooth chain: hinge → rotate → post.",
+  "Light med ball warm-up throws": "Easy rotational throws to prime the pattern — 50-60% effort. You're warming the tissue, not training power yet.",
+  "Cable rotational chop (high→low)": "Handle high, hips quiet, chop down and across staying tall. Rotate from the trunk, not the arms. Controlled — this is separation, not a race.",
+  "Landmine rotational press": "Bar in the corner, press up and across as you rotate through the hips. Post on the lead leg at the finish.",
+  // Posting / plyo
+  "Skater step → stick (onto lead leg)": "Bound laterally and land frozen on the lead leg — hold 1s, no wobble. That frozen landing IS lead-side posting.",
+  "Trap-bar jump (light) or squat jump": "Light load, jump for max height, land soft and absorb. Explosive up — quality over reps.",
+  "DB/barbell reverse lunge (lead-leg focus)": "Step back, drop straight down, drive through the FRONT (lead) heel to stand. Load the lead side deliberately.",
+  // Separation / dissociation
+  "Half-kneeling T-spine rotation": "Half-kneeling locks the hips so only the ribcage turns — that's the point. Rotate to end range, own it, return slow.",
+  "DB half-kneeling T-spine rotation (hips locked)": "Hold a light DB at the chest, hips pinned, rotate the trunk only. Trains the X-factor stretch under a little load.",
+  "Seated trunk rotation, hips pinned (DB at chest)": "Sit tall, DB at chest, rotate the ribcage while the hips stay square. Slow and honest — no cheating with the hips.",
+  "Open books (T-spine rotation)": "Side-lying, knees stacked, open the top arm toward the floor behind you. Chase the stretch through the mid-back, breathe into it.",
+  "DB half-kneeling wood chop (3s eccentric)": "Chop down and across, then take 3 full seconds to lower back up. Owning the deceleration teaches the trunk to stay back instead of dumping early.",
+  "Dowel-across-shoulders separation turns": "Dowel on the shoulders in golf posture. Turn the hips while the shoulders lag, then reverse. Feel the two move independently — this is skill work, go slow.",
+  "Step drill (lower starts, trunk lags)": "Rehearse transition: the lower body starts toward the target while the trunk stays back. Exaggerate the lag.",
+  "Hip-turn, dowel down spine (stable posture)": "Dowel along the spine to keep posture. Turn the hips without losing the spine angle — teaches a stable rotation.",
+  "Walking lunge w/ reach + twist": "Lunge, then reach up and rotate over the front leg. Opens the hip and t-spine together — great primer for rotation.",
+  "Side plank reach-through": "In a side plank, thread the top arm under your torso then reach it back open. Rotary control through a stable trunk.",
+  // Anti-rotation
+  "Half-kneeling Pallof press": "Press the handle straight out and resist it pulling you into rotation. Stay dead square — the anti-rotation is the work.",
+  "Half-kneeling cable Pallof press": "Cable out to the side; press out and hold, refusing to twist. Same skill as keeping the trunk quiet in transition.",
+  "DB suitcase hold (heavy, resist the lean)": "Heavy DB in one hand, stand perfectly upright — don't let it pull you sideways. Grip and trunk work that carries into posting.",
+  "Bird dog": "Opposite arm and leg, reach long, hips level — no rotation. Slow and controlled beats big range.",
+  // Hamstring / posterior
+  "DB single-leg RDL (3s eccentric)": "Hinge on one leg, 3s down, reach only as far as clean form allows — especially on the LEFT. Doubles as loaded hamstring lengthening; the hamstring governs the range.",
+  "DB single-leg RDL (lead leg)": "Single-leg hinge loading the lead side. Flat back, hips square, control the descent. Back off range on the left if it flares.",
+  "Single-leg Romanian deadlift": "Balance on one leg, hinge at the hip with a long spine, feel the hamstring. Stop where form breaks — don't chase depth.",
+  "Trap-bar deadlift (or back squat)": "Trap bar keeps the torso upright — kinder to the low back. Drive the floor away, neutral spine. Hamstring governs load: no ego, stop if the left flares.",
+  "Toe-touch / hamstring hang (easy)": "Gentle fold, let the back round smoothly. Easy — don't crank the hamstring right after heavy loading.",
+  // Squat / knee
+  "Goblet squat": "DB at the chest, sit down between the hips, knees track over toes, chest tall. Full depth you control.",
+  "Goblet squat to depth (empty/light)": "Light/empty, just grease the pattern to depth. Prep, not a working set.",
+  "Barbell back squat (or trap-bar deadlift)": "Brace, break at hips and knees together, drive up through mid-foot. Depth you own with a neutral spine.",
+  "Bulgarian split squat": "Rear foot elevated, drop straight down over the front leg, drive through the front heel. Big single-leg strength and stability.",
+  // Single-leg / hip
+  "KB/DB hip loading (single-leg, controlled)": "Load the hip through the range you're trying to open — controlled reps. This is the 'strengthen' step of your hip project.",
+  "DB step-back lunge (brace the front leg)": "Step back and brace hard through the front leg to stand. Keep the front shin quiet — control, not momentum.",
+  "Single-leg balance (eyes open→closed)": "Balance on one leg; progress to eyes closed. Quiet foot, level hips — the posting-stability base.",
+  "Cable or machine hip abduction": "Drive the leg out against resistance, control it back. Glute-medius work that supports the lead-side post.",
+  "Glute bridge": "Heels in, squeeze the glutes to lift, ribs down. Feel glutes, not low back.",
+  // Hip IR / mobility
+  "90/90 hip switches": "Sit in 90/90, rotate both knees to the other side under control. Chase the trail-hip internal rotation you're short on.",
+  "90/90 hip switches (extra reps L)": "Same 90/90 switch — give the LEFT side an extra set or two, since it's the tighter hip. Open before you load.",
+  "90/90 hip switch, long pause": "Switch to end range and hold 3s each side. The pause is where the range gets made.",
+  "90/90 hip switch, loaded end-range pause": "Add a light DB at the chest and pause at end range. Loaded mobility — own the position.",
+  "90/90 hip switch, long end-range pause": "Slow switches with a long pause at end range while you're warm. Push range, not effort.",
+  "Adductor rockback": "On all fours, one leg out to the side, rock the hips back. Opens the groin/adductor and feeds hip IR.",
+  "Adductor rockback (trail-hip IR)": "Rock back to bias the trail hip's internal rotation — the range your swing needs on the way back.",
+  "Internal rotation over bench (isolate)": "Shin across a bench, gently press the foot up to rotate the hip in. Isolate the IR you're missing — no forcing.",
+  "Half-kneeling lead-hip rotations": "Half-kneeling, rotate around the lead hip to open it. Small, controlled arcs.",
+  "World's greatest stretch": "Lunge, drop the elbow inside the front foot, then rotate the same-side arm up. Hits hip, groin, and t-spine in one.",
+  "Hip circles": "Big slow circles at the hip joint each direction. Wake the hip up through its full range.",
+  "Leg swings (front + lateral)": "Swing the leg front-to-back then side-to-side, controlled. Dynamic hip prep — don't force end range cold.",
+  "Cat-cow": "Alternate arching and rounding the spine with the breath. Segmental spine warm-up.",
+  "Hinge pattern drill w/ dowel (light)": "Dowel on the back touching head, mid-back, tailbone; hinge keeping all three in contact. Grooves a neutral hinge before loading.",
+  // Upper
+  "Barbell or DB bench press": "Shoulder blades set and down, controlled to the chest, press up. Tap 'Did:' to log barbell vs DB — the loads differ.",
+  "Weighted pull-up or lat pulldown": "Full hang to chin over bar (or full stretch to chest on the pulldown). Pull the elbows down, no swing.",
+  "Standing DB/barbell overhead press": "Brace the ribs down, press overhead without leaning back. Builds the overhead strength rotation is built on.",
+  "Chest-supported DB row": "Chest on the bench so the low back rests, row to the ribs, squeeze. Strict — no body english.",
+  "DB incline curl": "Incline stretches the biceps; curl without swinging. Slow and clean.",
+  "Cable or DB triceps extension": "Elbows fixed, extend fully, control back. Accessory — no ego.",
+  "Scap push-ups": "Arms straight, just pinch and spread the shoulder blades. Wakes up scap control before pressing.",
+  "DB or machine calf raise": "Full stretch at the bottom, tall at the top, brief pause. Don't bounce.",
+  "Hanging knee raise": "Hang, curl the pelvis and knees up — no swinging. Anti-swing control is the point.",
+  // Core
+  "Ab wheel rollout (or long-lever plank)": "Roll out only as far as you can keep the ribs down and back flat — no sag. Sub a long-lever plank if the wheel's too much.",
+  "DB side plank (or bodyweight)": "Straight line head to heels, hips stacked and lifted. Add a DB on the hip to progress.",
+  "Dead bug": "Flat low back pinned to the floor, extend opposite arm and leg slowly. If the back arches, shorten the range.",
+  "Front plank": "Straight line, glutes and abs tight, don't let the hips sag. Quality over time.",
+  // Shoulder ER / prehab
+  "Side-lying DB external rotation (trail arm)": "Elbow pinned to the side, rotate a LIGHT DB up. This is cuff work — 5-15 lb, slow, no momentum. Your shallowing insurance.",
+  "90/90 shoulder ER hold (light DB)": "Upper arm out at shoulder height, forearm up; hold a light DB in external rotation. Own the end range.",
+  "Bottoms-up DB hold (cuff stability)": "Hold a DB/KB upside-down; the wobble forces the cuff to stabilize. Light and controlled.",
+  "Sleeper + cross-body stretch": "Side-lying, gently press the forearm down (sleeper), then pull the arm across the body. Easy — internal-rotation range, no cranking.",
+  "Band shoulder dislocates / pass-throughs": "Wide grip on a band, pass it overhead and behind, then back. Open the shoulders before pressing/pulling.",
+  "Light band external rotations": "Elbow at side, rotate the band out. High reps, light — cuff activation.",
+  "Prone/standing scap squeezes": "Pinch the shoulder blades down and back, hold briefly. Sets the shoulders for the session.",
+  // Stretch / cooldown
+  "Standing hip flexor stretch": "Half-kneel or stand in a lunge, tuck the pelvis, feel the front of the trail hip. Don't arch the low back.",
+  "90/90 lead-hip stretch": "Sit in 90/90 and lean over the front (lead) shin to stretch the outer hip. Breathe into it.",
+  "90/90 lead-hip stretch (lean forward)": "Front shin across, hinge forward over it. Targets the lead-hip external rotation you post into.",
+  "Seated figure-4 glute stretch": "Ankle over opposite knee, hinge forward. Opens the glute/outer hip.",
+  "Couch stretch (hip flexor)": "Rear shin up a wall/couch, tuck the pelvis. Strong hip-flexor stretch — ease in.",
+  "Doorway pec stretch": "Forearm on the frame, step through to open the chest. Counters pressing volume.",
+  "Child's pose + lat reach": "Sit back into child's pose and walk the hands to one side to reach the lat.",
+  "Seated spinal twist": "Sit tall and rotate, using the arm as a gentle lever. Length through the trunk.",
+  "Cross-body shoulder stretch": "Pull the arm across the body to open the rear shoulder.",
+  "Sleeper stretch": "Side-lying, gently press the forearm toward the floor for internal-rotation range. No forcing.",
+  // Cardio
+  "Bike or row, easy": "Easy pace to raise temperature and blood flow — conversational, not a workout.",
+  "Bike or brisk walk": "Easy 3-4 min to get warm before you push range or screen. Cold tissue tests short.",
+};
+const hasHow = (name) => !!HOWTO[name];
+
 /* ------------------------------- STORE ------------------------------------ */
 const KEY = "golffit.v1";
 function blankDB() {
@@ -751,7 +874,7 @@ function newActive(dayId) {
   day.blocks.forEach((b) => {
     log[b.id] = b.exercises.map((e) => Array.from({ length: e.sets || 0 }, blankSet));
   });
-  return { id: uid(), dayId, date: todayISO(), accumSec: 0, running: false, lastResume: null, log };
+  return { id: uid(), dayId, date: todayISO(), accumSec: 0, running: false, lastResume: null, log, variant: {} };
 }
 /* Reconcile an active session's log to the day's current structure,
    preserving already-logged sets by position (needed after in-app edits). */
@@ -773,6 +896,7 @@ function ensureActive(dayId) {
   } else {
     reconcileLog(getDay(dayId), DB.activeSession);
   }
+  if (!DB.activeSession.variant) DB.activeSession.variant = {};
   return DB.activeSession;
 }
 function sessionElapsed(s) { return s.accumSec + (s.running && s.lastResume ? (Date.now() - s.lastResume) / 1000 : 0); }
@@ -783,6 +907,7 @@ function finishSession() {
     durationSec: Math.round(sessionElapsed(a)),
     blocks: day.blocks.map((b) => ({ blockId: b.id, label: b.label,
       exercises: b.exercises.map((e, ei) => ({ name: e.name, scheme: e.scheme,
+        variant: (a.variant && a.variant[b.id + ":" + ei]) || null,
         sets: (a.log[b.id] && a.log[b.id][ei]) ? a.log[b.id][ei].map((s) => ({ done: !!s.done, weight: numOrNull(s.weight), reps: numOrNull(s.reps) })) : [] })) })) };
   DB.sessions.unshift(rec);
   DB.sessions = DB.sessions.slice(0, 400);
@@ -917,6 +1042,7 @@ function pathEl(d) { const p = document.createElementNS("http://www.w3.org/2000/
 /* ------------------------------ DAY view ---------------------------------- */
 let openBlock = null;
 let editMode = false;
+let openHow = new Set(); // exercise keys with How-to expanded
 function viewDay(wrap, dayId) {
   const day = getDay(dayId);
   if (!day) return go("week");
@@ -1010,8 +1136,13 @@ function blockCard(day, active, b) {
         h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px" } },
           h("span", { style: { fontSize: "15px", fontWeight: 600 } }, e.name),
           h("span", { class: "tabnum", style: { fontSize: "13px", color: b.color, flex: "0 0 auto" } }, e.scheme)));
+      if (!editMode && hasHow(e.name)) exWrap.appendChild(howToBlock(b.id, ei, e.name));
       if (editMode) exWrap.appendChild(exerciseEditRow(day.id, b.id, ei, e));
-      else if (e.sets) exWrap.appendChild(setGrid(active, b, ei, e));
+      else if (e.sets) {
+        const vlist = variantsOf(e.name);
+        if (vlist.length) exWrap.appendChild(variantChips(active, b.id, ei, vlist));
+        exWrap.appendChild(setGrid(active, b, ei, e));
+      }
       body.appendChild(exWrap);
     });
     if (editMode) {
@@ -1135,6 +1266,34 @@ function libraryOverlay() {
   search.addEventListener("input", () => { P.query = search.value; refresh(); });
   refresh();
   return overlay;
+}
+
+/* Tap-to-expand How-to cue for a movement. */
+function howToBlock(bid, ei, name) {
+  const key = bid + ":" + ei;
+  const open = openHow.has(key);
+  const box = h("div", { style: { marginTop: "6px" } });
+  box.appendChild(h("button", { class: "btn", onclick: () => { open ? openHow.delete(key) : openHow.add(key); render(); },
+    style: { background: "none", border: "none", color: "var(--blue)", fontSize: "12px", fontWeight: 600, padding: "2px 0", cursor: "pointer" } },
+    (open ? "▾ " : "▸ ") + "How-to"));
+  if (open) box.appendChild(h("p", { style: { fontSize: "12.5px", color: "#b7bcc4", lineHeight: 1.55, margin: "6px 0 2px", padding: "9px 11px", background: "var(--bg)", borderRadius: "9px" } }, HOWTO[name]));
+  return box;
+}
+
+/* Variant picker shown above the set grid for multi-option exercises. */
+function variantChips(active, bid, ei, vlist) {
+  const key = bid + ":" + ei;
+  const wrap = h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", margin: "10px 0 2px", alignItems: "center" } },
+    h("span", { style: { fontSize: "11px", color: "var(--dim)", marginRight: "2px" } }, "Did:"));
+  vlist.forEach((v) => {
+    const on = active.variant[key] === v.name;
+    wrap.appendChild(h("button", { class: "chip" + (on ? " on" : ""), style: { padding: "5px 11px", fontSize: "11.5px" },
+      onclick: () => {
+        if (on) delete active.variant[key]; else active.variant[key] = v.name;
+        save(); render();
+      } }, v.label));
+  });
+  return wrap;
 }
 
 function setGrid(active, b, ei, e) {
@@ -1453,7 +1612,7 @@ function viewProgress(wrap) {
   DB.sessions.slice().reverse().forEach((s) => {
     s.blocks.forEach((b) => b.exercises.forEach((e) => {
       const top = e.sets.reduce((mx, st) => (st.weight != null && st.weight > mx ? st.weight : mx), -Infinity);
-      if (isFinite(top)) { (lifts[e.name] = lifts[e.name] || []).push({ x: s.date, y: top }); }
+      if (isFinite(top)) { const key = e.variant || e.name; (lifts[key] = lifts[key] || []).push({ x: s.date, y: top }); }
     }));
   });
   const liftNames = Object.keys(lifts).filter((n) => lifts[n].length >= 1).sort((a, b) => lifts[b].length - lifts[a].length);
