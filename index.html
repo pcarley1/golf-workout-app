@@ -1706,12 +1706,21 @@ function exerciseLog() {
 
     const u = (DB.settings && DB.settings.units) || "lb";
     entries.forEach((en) => {
-      const rows = (en.sets || []).map((st, i) => {
-        const w = st.weight != null ? st.weight + u : "—";
-        const r = st.reps != null ? st.reps : "—";
-        return h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "13px", padding: "3px 0", color: st.done ? "#ddd" : "var(--sub)" } },
-          h("span", {}, "Set " + (i + 1)),
-          h("span", { class: "tabnum" }, w + "  ×  " + r + (st.done ? "" : "  · skipped")));
+      // Drop untouched placeholder rows (no weight, no reps, not checked off).
+      const shown = (en.sets || []).map((st, i) => ({ st, n: i + 1 }))
+        .filter(({ st }) => st.done || st.weight != null || st.reps != null);
+      const rows = shown.map(({ st, n }) => {
+        const hasW = st.weight != null, hasR = st.reps != null;
+        const val = (hasW || hasR)
+          ? (hasW ? st.weight + u : "—") + "  ×  " + (hasR ? st.reps : "—")
+          : "logged";
+        return h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", padding: "4px 0" } },
+          h("span", { style: { color: "var(--sub)" } }, "Set " + n),
+          h("span", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+            h("span", { class: "tabnum", style: { color: st.done ? "#eee" : "var(--sub)" } }, val),
+            st.done
+              ? h("span", { style: { color: "var(--teal)", fontSize: "12px", fontWeight: 700 } }, "✓")
+              : h("span", { style: { color: "var(--dim)", fontSize: "11px" } }, "not checked off")));
       });
       const best = (en.sets || []).reduce((mx, st) => (st.weight != null && st.weight > mx ? st.weight : mx), -Infinity);
       detail.appendChild(h("div", { class: "card", style: { padding: "12px 16px", marginBottom: "10px" } },
