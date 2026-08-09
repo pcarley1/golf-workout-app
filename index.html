@@ -180,6 +180,7 @@ const DAYS = [
       { id: "blockC", label: "Block C — Arms & Upper Back", tag: "Superset · 3 rounds", dur: 8 * 60, color: "var(--orange)",
         note: "Accessory volume for elbows and mid-back. Controlled, no ego. Rest 45s.",
         exercises: [
+          { name: "Anti-extension row (plank row)", scheme: "8 / side · slow", sets: 3 },
           { name: "DB incline curl", scheme: "12 reps", sets: 3 },
           { name: "Cable or DB triceps extension", scheme: "12 reps", sets: 3 },
         ] },
@@ -663,6 +664,7 @@ const EXERCISES = [
   { n: "Weighted pull-up or lat pulldown", u: ["pull"], e: ["bw", "machine"] },
   { n: "Chest-supported DB row", u: ["pull"], e: ["db"] },
   { n: "Single-arm DB row", u: ["pull"], e: ["db"] },
+  { n: "Anti-extension row (plank row)", u: ["pull", "core"], e: ["db"] },
   { n: "Seated cable row", u: ["pull"], e: ["cable"] },
   { n: "Face pull", u: ["pull", "shallowing"], e: ["cable", "band"] },
   { n: "Band pull-aparts", u: ["pull", "warmup"], e: ["band"] },
@@ -820,6 +822,7 @@ const HOWTO = {
   "Weighted pull-up or lat pulldown": "Full hang to chin over bar (or full stretch to chest on the pulldown). Pull the elbows down, no swing.",
   "Standing DB/barbell overhead press": "Brace the ribs down, press overhead without leaning back. Builds the overhead strength rotation is built on.",
   "Chest-supported DB row": "Chest on the bench so the low back rests, row to the ribs, squeeze. Strict — no body english.",
+  "Anti-extension row (plank row)": "High plank on DBs, feet wide. Row one DB to the ribs while the hips stay DEAD level — no sagging (that's the anti-extension), no twisting toward the pulling arm (anti-rotation). Slow and honest; the harder your trunk fights to stay square, the better. Trains the golf-specific skill of a stable trunk while the arms work. Regress by widening the feet or elevating the hands on a bench.",
   "DB incline curl": "Incline stretches the biceps; curl without swinging. Slow and clean.",
   "Cable or DB triceps extension": "Elbows fixed, extend fully, control back. Accessory — no ego.",
   "Scap push-ups": "Arms straight, just pinch and spread the shoulder blades. Wakes up scap control before pressing.",
