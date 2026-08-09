@@ -216,6 +216,7 @@ const DAYS = [
           { name: "90/90 hip switch, long pause", scheme: "6 / side · 3s hold", sets: 2 },
           { name: "Half-kneeling T-spine rotation", scheme: "8 / side", sets: 2 },
           { name: "Adductor rockback", scheme: "8 / side", sets: 2 },
+          { name: "Cossack squat (counterbalanced)", scheme: "5 / side · slow", sets: 2 },
           { name: "World's greatest stretch", scheme: "5 / side" },
         ] },
       { id: "stability", label: "Stability & Slider Work", tag: "Light · 2 rounds", dur: 8 * 60, color: "var(--teal)",
@@ -595,6 +596,9 @@ const EXERCISES = [
   { n: "Seated / lying leg curl", u: ["hamstring"], e: ["machine"] },
   { n: "45° back extension", u: ["hamstring", "glute", "core"], e: ["bw"] },
   { n: "Nordic hamstring curl (assisted)", u: ["hamstring"], e: ["bw"], c: "hamstring" },
+  { n: "Slider hamstring curl (supine, 3s eccentric)", u: ["hamstring", "glute"], e: ["slider"], c: "hamstring" },
+  { n: "Slider hamstring slide-out (from bridge)", u: ["hamstring", "hipmob"], e: ["slider"], c: "hamstring" },
+  { n: "Sliding single-leg RDL (rear-foot slide)", u: ["hamstring", "singleleg", "hipmob"], e: ["slider"], c: "hamstring" },
   // --- Hinge / deadlift (bilateral) ---
   { n: "Trap-bar deadlift (or back squat)", u: ["hinge", "posting"], e: ["trapbar", "bar"], c: "hamstring" },
   { n: "Romanian deadlift", u: ["hinge", "hamstring"], e: ["bar", "db"], c: "hamstring" },
@@ -763,6 +767,9 @@ const HOWTO = {
   "Single-leg Romanian deadlift": "Balance on one leg, hinge at the hip with a long spine, feel the hamstring. Stop where form breaks — don't chase depth.",
   "Trap-bar deadlift (or back squat)": "Trap bar keeps the torso upright — kinder to the low back. Drive the floor away, neutral spine. Hamstring governs load: no ego, stop if the left flares.",
   "Toe-touch / hamstring hang (easy)": "Gentle fold, let the back round smoothly. Easy — don't crank the hamstring right after heavy loading.",
+  "Slider hamstring curl (supine, 3s eccentric)": "On your back, heels on sliders, hips bridged up. Curl heels toward you, then take 3 slow seconds to slide them out to near-straight while keeping the hips lifted. That loaded lengthening builds length AND strength — far more lasting than a passive reach. Start with both legs; go single-leg (LEFT first) only when you own it. Stop if the left hamstring flares.",
+  "Slider hamstring slide-out (from bridge)": "Bridge hips high, feet on sliders. Slowly slide both heels out toward straight legs, resisting the whole way, then pull back in — hips never drop. It's an eccentric hamstring stretch under your own control, which unlocks range better than holding a stretch. Short range first; add reach as the left side allows.",
+  "Sliding single-leg RDL (rear-foot slide)": "Stand on one leg, rear toes on a slider. Hinge the standing hip and slide the back foot away, long spine, feeling the STANDING-leg hamstring lengthen. Slide back to stand. Trains balance + hamstring length through range — back off the slide on the left if it grabs.",
   // Squat / knee
   "Goblet squat": "DB at the chest, sit down between the hips, knees track over toes, chest tall. Full depth you control.",
   "Goblet squat to depth (empty/light)": "Light/empty, just grease the pattern to depth. Prep, not a working set.",
