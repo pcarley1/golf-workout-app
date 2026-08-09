@@ -32,7 +32,7 @@ object. One blob keeps export/import trivial and leaves a clean seam for future 
 - **Week** — 5-day plan + today highlight + screen-due badge + Library.
 - **Day** — blocks with session/per-block timers and weight+reps set logging; *Finish* writes to `sessions[]`.
 - **Screen** — log the canonical self-screen; opens the **Angle Tool**.
-- **Progress** — screen trends (L vs R overlaid), top-set-by-lift, recent sessions, streak tiles.
+- **Progress** — searchable exercise log (full per-session history for any lift), screen trends (L vs R overlaid), top-set-by-lift, recent sessions, streak tiles.
 - **Data** — export / import / erase.
 
 ## Consolidation notes
